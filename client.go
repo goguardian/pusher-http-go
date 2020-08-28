@@ -59,6 +59,7 @@ type Client struct {
 	EncryptionMasterKey          string  // deprecated
 	EncryptionMasterKeyBase64    string  // for E2E
 	validatedEncryptionMasterKey *[]byte // parsed key for use
+	MaxEventPayloadSize          int
 }
 
 /*
@@ -200,7 +201,13 @@ func (c *Client) trigger(channels []string, eventName string, data interface{}, 
 		return err
 	}
 
-	payload, err := encodeTriggerBody(channels, eventName, data, socketID, masterKey)
+	maxEventPayloadSize := c.MaxEventPayloadSize
+	if maxEventPayloadSize == 0 {
+		// on dedicated clusters we may allow 2x the usual limit
+		maxEventPayloadSize = 20480
+	}
+
+	payload, err := encodeTriggerBody(channels, eventName, data, socketID, masterKey, maxEventPayloadSize)
 	if err != nil {
 		return err
 	}
@@ -250,7 +257,13 @@ func (c *Client) TriggerBatch(batch []Event) error {
 		return keyErr
 	}
 
-	payload, err := encodeTriggerBatchBody(batch, masterKey)
+	maxEventPayloadSize := c.MaxEventPayloadSize
+	if maxEventPayloadSize == 0 {
+		// on dedicated clusters we may allow 2x the usual limit
+		maxEventPayloadSize = 20480
+	}
+
+	payload, err := encodeTriggerBatchBody(batch, masterKey, maxEventPayloadSize)
 	if err != nil {
 		return err
 	}
